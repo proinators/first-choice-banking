@@ -19,11 +19,6 @@ export default function LoginPage() {
   const [otpError, setOtpError] = useState("");
   const router = useRouter();
 
-  // Hardcoded credentials
-  const validAccount = "1234567890";
-  const validPassword = "password123";
-  const validOTP = "123456";
-
   function generateCaptcha() {
     // Simple math captcha
     const a = Math.floor(Math.random() * 10) + 1;
@@ -31,7 +26,7 @@ export default function LoginPage() {
     return { q: `${a} + ${b} = ?`, ans: (a + b).toString() };
   }
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     if (locked) {
@@ -48,22 +43,37 @@ export default function LoginPage() {
       setCaptchaInput("");
       return;
     }
-    if (account === validAccount && password === validPassword) {
-      setShow2FA(true);
-      setOtp(validOTP); // Simulate sending OTP
-      setError("");
-    } else {
-      setFailedAttempts(failedAttempts + 1);
-      if (failedAttempts + 1 >= 3) {
-        setLocked(true);
-        setError("Account locked after 3 failed attempts. Reset password to unlock.");
-      } else {
-        setError(`Invalid account number or password. Attempts left: ${2 - failedAttempts}`);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account, password })
+      });
+      console.log(res);
+      const data = await res.json();
+      if (!res.ok) {
+        setFailedAttempts(failedAttempts + 1);
+        if (failedAttempts + 1 >= 3) {
+          setLocked(true);
+          setError("Account locked after 3 failed attempts. Reset password to unlock.");
+        } else {
+          setError(data.error || "Invalid account number or password.");
+        }
+        setCaptcha(generateCaptcha());
+        setCaptchaInput("");
+        return;
       }
-      setCaptcha(generateCaptcha());
-      setCaptchaInput("");
+      // Save session and redirect
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("bank_logged_in", "true");
+        window.localStorage.setItem("bank_account", account);
+      }
+      router.push("/summary");
+    } catch (err) {
+      setError("Network error. Please try again.");
     }
   };
+
 
   const handleReset = (e) => {
     e.preventDefault();
@@ -81,20 +91,7 @@ export default function LoginPage() {
     }
   };
 
-  const handle2FA = (e) => {
-    e.preventDefault();
-    setOtpError("");
-    if (otpInput === otp) {
-      // Simulate login session
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("bank_logged_in", "true");
-        window.localStorage.setItem("bank_account", account);
-      }
-      router.push("/summary");
-    } else {
-      setOtpError("Incorrect OTP. Please try again.");
-    }
-  };
+  // 2FA/OTP is not implemented in backend. Remove this logic.
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
@@ -113,21 +110,6 @@ export default function LoginPage() {
             <button type="submit" className="w-full button-main">Send Reset Link</button>
             {resetSent && <div className="text-green-600 text-center mt-2">Reset link sent! Account unlocked.</div>}
             <button type="button" onClick={() => setShowReset(false)} className="w-full mt-2 text-blue-700 underline">Back to Login</button>
-          </form>
-        ) : show2FA ? (
-          <form onSubmit={handle2FA} className="space-y-4">
-            <div className="text-center text-blue-700 font-semibold">Enter the OTP sent to your registered email (demo: <span className='font-mono'>123456</span>)</div>
-            <input
-              type="text"
-              maxLength={6}
-              className="w-full border rounded px-3 py-2 text-center tracking-widest font-mono"
-              value={otpInput}
-              onChange={(e) => setOtpInput(e.target.value)}
-              required
-              placeholder="Enter 6-digit OTP"
-            />
-            {otpError && <div className="text-red-600 text-center">{otpError}</div>}
-            <button type="submit" className="w-full button-main">Verify & Login</button>
           </form>
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">

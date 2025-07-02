@@ -1,63 +1,15 @@
 "use client";
-import { useState } from "react";
-
-const transactionsData = [
-  {
-    id: 1,
-    date: "2025-07-01",
-    amount: -2500,
-    type: "Debit",
-    status: "Completed",
-    description: "Grocery Store",
-    account: "1234567890",
-  },
-  {
-    id: 2,
-    date: "2025-06-29",
-    amount: 5000,
-    type: "Credit",
-    status: "Completed",
-    description: "Salary",
-    account: "1234567890",
-  },
-  {
-    id: 3,
-    date: "2025-06-28",
-    amount: -1200,
-    type: "Debit",
-    status: "Pending",
-    description: "Electricity Bill",
-    account: "9876543210",
-  },
-  {
-    id: 4,
-    date: "2025-06-25",
-    amount: -3000,
-    type: "Debit",
-    status: "Completed",
-    description: "Online Shopping",
-    account: "1234567890",
-  },
-  {
-    id: 5,
-    date: "2025-06-20",
-    amount: 10000,
-    type: "Credit",
-    status: "Completed",
-    description: "FD Maturity",
-    account: "9876543210",
-  },
-];
-
+import { useState, useEffect } from "react";
+import React from "react";
 const transactionTypes = ["All", "Credit", "Debit"];
 const statusTypes = ["All", "Completed", "Pending"];
 
 function downloadCSV(transactions) {
   const header = "Date,Account,Type,Amount,Status,Description\n";
-  const rows = transactions
+  const rows = (transactions || [])
     .map(
       (t) =>
-        `${t.date},${t.account},${t.type},${t.amount},${t.status},"${t.description.replace(/\"/g, '"')}"`
+        `${t.date},${t.account},${t.type},${t.amount},${t.status},"${(t.description || '').replace(/\"/g, '"')}"`
     )
     .join("\n");
   const csv = header + rows;
@@ -75,14 +27,36 @@ export default function TransactionsPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("");
   const [expanded, setExpanded] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filtered = transactionsData.filter((t) => {
-    return (
-      (typeFilter === "All" || t.type === typeFilter) &&
-      (statusFilter === "All" || t.status === statusFilter) &&
-      (!dateFilter || t.date === dateFilter)
-    );
-  });
+  useEffect(() => {
+    const account_number = typeof window !== "undefined" ? window.localStorage.getItem("bank_account") : null;
+    if (!account_number) {
+      setError("Not logged in");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    let url = `/api/transactions?account_number=${account_number}`;
+    if (typeFilter && typeFilter !== 'All') url += `&type=${typeFilter}`;
+    if (statusFilter && statusFilter !== 'All') url += `&status=${statusFilter}`;
+    if (dateFilter) url += `&date=${dateFilter}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        setTransactions(data.transactions || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to fetch transactions");
+        setLoading(false);
+      });
+  }, [typeFilter, statusFilter, dateFilter]);
+
+  if (loading) return <div className="max-w-5xl mx-auto p-8 text-center text-xl">Loading...</div>;
+  if (error) return <div className="max-w-5xl mx-auto p-8 text-center text-red-600 text-xl">{ error }</div>;
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -114,7 +88,7 @@ export default function TransactionsPage() {
         />
         <button
           className="button-main"
-          onClick={ () => downloadCSV(filtered) }
+          onClick={ () => downloadCSV(transactions) }
         >
           Download CSV
         </button>
@@ -132,29 +106,27 @@ export default function TransactionsPage() {
             </tr>
           </thead>
           <tbody>
-            { filtered.length === 0 && (
+            { transactions.length === 0 && (
               <tr>
                 <td colSpan={ 6 } className="text-center py-8 text-gray-400 text-xl">
                   No transactions found.
                 </td>
               </tr>
             ) }
-            { filtered.map((t) => (
-              <>
+            { transactions.map((t) => (
+              <React.Fragment key={ t.id }>
                 <tr key={ t.id } className="hover:bg-blue-100/60 transition-colors">
                   <td className="py-2 px-4">{ t.date }</td>
                   <td className="py-2 px-4">{ t.account }</td>
                   <td className="py-2 px-4">{ t.type }</td>
-                  <td className={ `py-2 px-4 font-bold ${t.amount < 0 ? "text-red-600" : "text-green-700"}` }>
-                    { t.amount < 0 ? "-" : "+" }₹{ Math.abs(t.amount).toLocaleString() }
-                  </td>
+                  <td className="py-2 px-4">{ t.amount }</td>
                   <td className="py-2 px-4">{ t.status }</td>
                   <td className="py-2 px-4">
                     <button
-                      className="text-blue-700 underline text-sm"
+                      className="underline text-blue-700 hover:text-blue-900"
                       onClick={ () => setExpanded(expanded === t.id ? null : t.id) }
                     >
-                      { expanded === t.id ? "Hide" : "View" }
+                      { expanded === t.id ? "Hide" : "Details" }
                     </button>
                   </td>
                 </tr>
@@ -167,7 +139,7 @@ export default function TransactionsPage() {
                     </td>
                   </tr>
                 ) }
-              </>
+              </React.Fragment>
             )) }
           </tbody>
         </table>

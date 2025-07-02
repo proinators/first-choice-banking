@@ -1,16 +1,14 @@
 "use client";
-import { useState } from "react";
 
-const ownAccounts = [
-  { label: "Checking Account (1234567890)", value: "1234567890" },
-  { label: "Savings Account (9876543210)", value: "9876543210" },
-];
 const transferMethods = ["NEFT", "RTGS", "IMPS"];
+import { useEffect, useState } from "react";
 
 export default function TransferPage() {
   const [step, setStep] = useState(1);
+  const [ownAccounts, setOwnAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
-    from: ownAccounts[0].value,
+    from: "",
     to: "",
     ifsc: "",
     amount: "",
@@ -18,6 +16,33 @@ export default function TransferPage() {
   });
   const [error, setError] = useState("");
   const [reference, setReference] = useState("");
+
+  useEffect(() => {
+    const account_number = typeof window !== "undefined" ? window.localStorage.getItem("bank_account") : null;
+    if (!account_number) {
+      setError("Not logged in");
+      setLoading(false);
+      return;
+    }
+    
+    fetch(`/api/summary?account_number=${account_number}`)
+      .then(res => res.json())
+      .then(data => {
+        const accounts = (data.accounts || []).map(acc => ({
+          value: acc.number,
+          label: `${acc.type} (${acc.number})`
+        }));
+        setOwnAccounts(accounts);
+        if (accounts.length > 0) {
+          setForm(f => ({ ...f, from: accounts[0].value }));
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load accounts");
+        setLoading(false);
+      });
+  }, []);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -46,6 +71,10 @@ export default function TransferPage() {
     setReference("TXN" + Math.floor(Math.random() * 1000000000));
     setStep(3);
   }
+
+  if (loading) return <div className="max-w-2xl mx-auto p-8 text-center text-xl">Loading...</div>;
+  if (error) return <div className="max-w-2xl mx-auto p-8 text-center text-red-600 text-xl">{error}</div>;
+  if (ownAccounts.length === 0) return <div className="max-w-2xl mx-auto p-8 text-center text-xl">No accounts found</div>;
 
   return (
     <div className="max-w-2xl mx-auto p-8">
