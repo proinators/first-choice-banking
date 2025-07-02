@@ -97,20 +97,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-200">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold mb-6 text-center text-blue-700">FirstChoice Bank Login</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="w-full max-w-lg glass-card p-10 shadow-2xl flex flex-col items-center">
+        <h1 className="text-4xl font-bold mb-8 text-center text-blue-900 drop-shadow-lg tracking-tight" style={{letterSpacing:'.01em'}}>FirstChoice Bank Login</h1>
         {showReset ? (
           <form onSubmit={handleReset} className="space-y-4">
-            <label className="block text-gray-700">Enter your email to reset password:</label>
+            <label className="label-strong">Enter your email to reset password:</label>
             <input
               type="email"
-              className="w-full border rounded px-3 py-2"
+              className="w-full input-strong"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <button type="submit" className="w-full bg-blue-700 text-white py-2 rounded hover:bg-blue-800">Send Reset Link</button>
+            <button type="submit" className="w-full button-main">Send Reset Link</button>
             {resetSent && <div className="text-green-600 text-center mt-2">Reset link sent! Account unlocked.</div>}
             <button type="button" onClick={() => setShowReset(false)} className="w-full mt-2 text-blue-700 underline">Back to Login</button>
           </form>
@@ -127,16 +127,16 @@ export default function LoginPage() {
               placeholder="Enter 6-digit OTP"
             />
             {otpError && <div className="text-red-600 text-center">{otpError}</div>}
-            <button type="submit" className="w-full bg-blue-700 text-white py-2 rounded hover:bg-blue-800">Verify & Login</button>
+            <button type="submit" className="w-full button-main">Verify & Login</button>
           </form>
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-gray-700">Account Number</label>
+              <label className="label-strong">Account Number</label>
               <input
                 type="text"
                 maxLength={10}
-                className="w-full border rounded px-3 py-2"
+                className="w-full input-strong"
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
                 required
@@ -147,10 +147,10 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="block text-gray-700">Password</label>
+              <label className="label-strong">Password</label>
               <input
                 type="password"
-                className="w-full border rounded px-3 py-2"
+                className="w-full input-strong"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -159,10 +159,10 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="block text-gray-700">CAPTCHA: <span className="font-mono">{captcha.q}</span></label>
+              <label className="label-strong">CAPTCHA: <span className="font-mono">{captcha.q}</span></label>
               <input
                 type="text"
-                className="w-full border rounded px-3 py-2"
+                className="w-full input-strong"
                 value={captchaInput}
                 onChange={(e) => setCaptchaInput(e.target.value)}
                 required
@@ -171,8 +171,8 @@ export default function LoginPage() {
               />
             </div>
             {error && <div className="text-red-600 text-center">{error}</div>}
-            <button type="submit" className="w-full bg-blue-700 text-white py-2 rounded hover:bg-blue-800" disabled={locked}>Login</button>
-            <button type="button" onClick={() => setShowReset(true)} className="w-full text-blue-700 underline">Forgot Password?</button>
+            <button type="submit" className="w-full button-main" disabled={locked}>Login</button>
+            <button type="button" onClick={() => setShowReset(true)} className="w-full text-blue-700 underline font-semibold">Forgot Password?</button>
           </form>
         )}
       </div>

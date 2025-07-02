@@ -85,11 +85,11 @@ export default function TransactionsPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6 text-blue-700">Recent Transactions</h1>
-      <div className="flex flex-wrap gap-4 mb-4">
+    <div className="max-w-5xl mx-auto p-8">
+      <h1 className="text-4xl font-extrabold mb-10 text-center text-blue-900 tracking-tight drop-shadow-lg">Recent Transactions</h1>
+      <div className="glass-card mb-10 px-8 py-6 flex flex-wrap gap-6 items-center justify-center shadow-xl">
         <select
-          className="border px-2 py-1 rounded"
+          className="input-strong w-48"
           value={ typeFilter }
           onChange={ (e) => setTypeFilter(e.target.value) }
         >
@@ -98,7 +98,7 @@ export default function TransactionsPage() {
           )) }
         </select>
         <select
-          className="border px-2 py-1 rounded"
+          className="input-strong w-48"
           value={ statusFilter }
           onChange={ (e) => setStatusFilter(e.target.value) }
         >
@@ -108,40 +108,40 @@ export default function TransactionsPage() {
         </select>
         <input
           type="date"
-          className="border px-2 py-1 rounded"
+          className="input-strong w-48"
           value={ dateFilter }
           onChange={ (e) => setDateFilter(e.target.value) }
         />
         <button
-          className="bg-blue-700 text-white px-4 py-1 rounded hover:bg-blue-800"
+          className="button-main"
           onClick={ () => downloadCSV(filtered) }
         >
           Download CSV
         </button>
       </div>
-      <div className="overflow-x-auto rounded shadow bg-white">
-        <table className="min-w-full">
+      <div className="glass-card overflow-x-auto rounded-2xl shadow-2xl">
+        <table className="min-w-full text-lg">
           <thead>
-            <tr className="bg-blue-100 text-blue-700">
-              <th className="py-2 px-4">Date</th>
-              <th className="py-2 px-4">Account</th>
-              <th className="py-2 px-4">Type</th>
-              <th className="py-2 px-4">Amount</th>
-              <th className="py-2 px-4">Status</th>
-              <th className="py-2 px-4">Details</th>
+            <tr className="bg-gradient-to-r from-blue-100/80 to-blue-200/70 text-blue-800">
+              <th className="py-4 px-6">Date</th>
+              <th className="py-4 px-6">Account</th>
+              <th className="py-4 px-6">Type</th>
+              <th className="py-4 px-6">Amount</th>
+              <th className="py-4 px-6">Status</th>
+              <th className="py-4 px-6">Details</th>
             </tr>
           </thead>
           <tbody>
             { filtered.length === 0 && (
               <tr>
-                <td colSpan={ 6 } className="text-center py-6 text-gray-500">
+                <td colSpan={ 6 } className="text-center py-8 text-gray-400 text-xl">
                   No transactions found.
                 </td>
               </tr>
             ) }
             { filtered.map((t) => (
               <>
-                <tr key={ t.id } className="hover:bg-blue-50">
+                <tr key={ t.id } className="hover:bg-blue-100/60 transition-colors">
                   <td className="py-2 px-4">{ t.date }</td>
                   <td className="py-2 px-4">{ t.account }</td>
                   <td className="py-2 px-4">{ t.type }</td>
@@ -159,8 +159,8 @@ export default function TransactionsPage() {
                   </td>
                 </tr>
                 { expanded === t.id && (
-                  <tr className="bg-blue-50" key={ t.id + "-details" }>
-                    <td colSpan={ 6 } className="p-4 text-sm text-gray-700">
+                  <tr className="bg-blue-50/80" key={ t.id + "-details" }>
+                    <td colSpan={ 6 } className="p-6 text-lg text-blue-900/90">
                       <div><span className="font-semibold">Description:</span> { t.description }</div>
                       <div><span className="font-semibold">Transaction ID:</span> { t.id }</div>
                       <div><span className="font-semibold">Status:</span> { t.status }</div>

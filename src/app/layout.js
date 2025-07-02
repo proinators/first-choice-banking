@@ -46,15 +46,15 @@ function Navbar() {
   }
 
   return (
-    <nav className="bg-blue-700 text-white px-6 py-3 flex gap-4 items-center justify-center">
-      {!loggedIn && <a className="hover:underline" href="/login">Login</a>}
-      <a className="hover:underline" href="/summary">Account Summary</a>
-      <a className="hover:underline" href="/transactions">Transactions</a>
-      <a className="hover:underline" href="/transfer">Transfer Money</a>
+    <nav className="glass-card shadow-lg mx-auto mt-6 mb-10 flex flex-wrap gap-6 items-center justify-center px-10 py-4 border border-blue-200/40 backdrop-blur-md" style={{fontFamily: 'var(--font-geist-sans)'}}>
+      {!loggedIn && <a className="text-lg font-semibold text-blue-800 hover:text-blue-600 transition-colors" href="/login">Login</a>}
+      <a className="text-lg font-semibold text-blue-800 hover:text-blue-600 transition-colors" href="/summary">Account Summary</a>
+      <a className="text-lg font-semibold text-blue-800 hover:text-blue-600 transition-colors" href="/transactions">Transactions</a>
+      <a className="text-lg font-semibold text-blue-800 hover:text-blue-600 transition-colors" href="/transfer">Transfer Money</a>
       {loggedIn && (
         <>
-          <span className="ml-4 font-mono bg-blue-900 px-2 py-1 rounded">{account}</span>
-          <button onClick={logout} className="ml-2 bg-white text-blue-700 px-3 py-1 rounded hover:bg-blue-100">Logout</button>
+          <span className="ml-6 font-mono bg-blue-900/80 text-white px-4 py-2 rounded-xl text-base shadow-sm">{account}</span>
+          <button onClick={logout} className="ml-4 button-main shadow-md">Logout</button>
         </>
       )}
     </nav>
