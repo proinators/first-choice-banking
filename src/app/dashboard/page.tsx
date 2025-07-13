@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowPathIcon, 
@@ -17,27 +17,17 @@ import {
 } from '@heroicons/react/24/outline';
 import { useBanking } from '@/context/BankingContext';
 import generateStatement from '@/utils/generateStatement';
+import { supabase } from '@/utils/supabaseClient';
 
 // No mock data needed - using context data
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { accounts, transactions, fixedDeposits } = useBanking();
-  const [user, setUser] = useState<{name: string, email?: string} | null>(null);
-
+  const { user, loading, accounts, transactions, fixedDeposits } = useBanking();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
-      router.push('/');
-    } else {
-      setUser(JSON.parse(userData));
-    }
-  }, [router]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     router.push('/');
   };
 
@@ -64,19 +54,19 @@ export default function DashboardPage() {
     .slice(0, 5);
 
   const handleDownloadStatement = (accountId: string) => {
-    const account = accounts.find(acc => acc.id.toString() === accountId);
+    const account = accounts.find(acc => acc.id === accountId);
     if (account) {
       const accountTransactions = transactions.filter(tx => tx.account === account.number);
       generateStatement(account, accountTransactions, formatCurrency, formatDate);
     }
   };
 
-  if (!user) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#031d44] to-[#04395e] p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white">Loading...</p>
+          <p className="mt-4 text-white">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -98,16 +88,16 @@ export default function DashboardPage() {
                 className="flex items-center space-x-2 focus:outline-none"
               >
                 <div className="h-8 w-8 rounded-full bg-[#66c3ff] flex items-center justify-center text-[#031d44] font-semibold">
-                  {user.name.charAt(0).toUpperCase()}
+                  {user.user_metadata.full_name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-white text-sm font-medium">{user.name}</span>
+                <span className="text-white text-sm font-medium">{user.user_metadata.full_name}</span>
               </button>
 
               {isMenuOpen && (
                 <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                   <div className="py-1">
                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                      <p className="font-medium">{user.name}</p>
+                      <p className="font-medium">{user.user_metadata.full_name}</p>
                       <p className="text-xs text-gray-500 truncate">{user.email || ''}</p>
                     </div>
                     <button
@@ -131,7 +121,7 @@ export default function DashboardPage() {
           <div className="bg-gradient-to-r from-[#1d6172] to-[#04395e] rounded-xl p-6 mb-6 shadow-lg">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-white">Welcome back, {user.name.split(' ')[0]}!</h2>
+                <h2 className="text-2xl font-bold text-white">Welcome back, {user.user_metadata.full_name.split(' ')[0]}!</h2>
                 <p className="text-blue-100 mt-1">Here's an overview of your accounts</p>
               </div>
               <div className="mt-4 md:mt-0">
@@ -163,7 +153,7 @@ export default function DashboardPage() {
             <button
               onClick={() => {
                 if (accounts.length > 0) {
-                  handleDownloadStatement(accounts[0].id.toString());
+                  handleDownloadStatement(accounts[0].id);
                 }
               }}
               className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-colors group"
@@ -250,14 +240,14 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex space-x-2">
                             <button
-                              onClick={() => handleDownloadStatement(account.id.toString())}
+                              onClick={() => handleDownloadStatement(account.id)}
                               className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-full"
                               title="Download Statement"
                             >
                               <DocumentTextIcon className="h-5 w-5" />
                             </button>
                             <button
-                              onClick={() => router.push(`/transfer?from=${account.id.toString()}`)}
+                              onClick={() => router.push(`/transfer?from=${account.id}`)}
                               className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-full"
                               title="Transfer Money"
                             >
@@ -332,10 +322,10 @@ export default function DashboardPage() {
                                   <p className="text-xs text-blue-200">Maturity Date</p>
                                   <p className="text-sm text-white font-medium">{formatDate(deposit.maturityDate)}</p>
                                 </div>
-                                                              <div>
-                                <p className="text-xs text-blue-200">Interest Rate</p>
-                                <p className="text-sm text-white font-medium">{deposit.interestRate}%</p>
-                              </div>
+                                <div>
+                                  <p className="text-xs text-blue-200">Interest Rate</p>
+                                  <p className="text-sm text-white font-medium">{deposit.interestRate}%</p>
+                                </div>
                               </div>
                               {!isMatured && daysToMaturity > 0 && (
                                 <div className="mt-3 p-2 bg-blue-500/10 rounded-lg">

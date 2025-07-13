@@ -4,12 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loadCaptchaEnginge, LoadCanvasTemplate, validateCaptcha } from 'react-simple-captcha';
+import { supabase } from '@/utils/supabaseClient';
 
-// Hardcoded user data, to fetch from database
-const users = [
-  { email: 'john.doe@example.com', password: 'password123', name: 'John Doe', accountNumber: '1234567890' },
-  { email: 'jane.smith@example.com', password: 'securepass', name: 'Jane Smith', accountNumber: '0987654321' },
-];
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +22,7 @@ export default function LoginPage() {
     loadCaptchaEnginge(6, 'white', 'black');
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -49,19 +46,22 @@ export default function LoginPage() {
       return;
     }
 
-    // Check credentials
-    const user = users.find(
-      (u) => u.email === email && u.password === password
-    );
+    // Sign in with Supabase
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (user) {
-      // In a real app, you would set an auth token here
-      localStorage.setItem('user', JSON.stringify(user));
-      router.push('/dashboard');
-    } else {
-      setError('Invalid email or password');
+    if (authError) {
+      setError(authError.message);
       loadCaptchaEnginge(6, 'white', 'black'); // Reload CAPTCHA on failed login
       setCaptchaText('');
+      return;
+    }
+
+    if (data.user) {
+      // The user object is now managed by Supabase Auth, no need for localStorage
+      router.push('/dashboard');
     }
   };
 
@@ -220,7 +220,7 @@ export default function LoginPage() {
             <div className="mt-6">
               <button
                 type="button"
-                onClick={() => alert('Account creation functionality coming soon!')}
+                onClick={() => router.push('/register')}
                 className="w-full flex justify-center py-2.5 px-4 border border-white/20 rounded-lg text-sm font-medium text-white bg-white/5 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c3ff] transition-colors"
               >
                 Open a new account

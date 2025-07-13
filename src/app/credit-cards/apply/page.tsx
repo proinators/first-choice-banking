@@ -11,13 +11,12 @@ import {
 
 export default function ApplyCreditCardPage() {
   const router = useRouter();
-  const { addCreditCard } = useBanking();
-  const [user, setUser] = useState<{ name: string } | null>(null);
+  const { user, addCreditCard } = useBanking();
 
   const [form, setForm] = useState({
     name: "",
-    type: "Standard", // Standard, Gold, Platinum
-    creditLimit: "50000",
+    type: "Standard",
+    creditLimit: 50000,
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,28 +24,26 @@ export default function ApplyCreditCardPage() {
   const [cardNumber, setCardNumber] = useState("");
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (!userData) {
-      router.push("/");
-    } else {
-      setUser(JSON.parse(userData));
-      setForm((prev) => ({ ...prev, name: JSON.parse(userData).name }));
+    if (user?.user_metadata.full_name) {
+      setForm((prev) => ({ ...prev, name: user.user_metadata.full_name }));
     }
-  }, [router]);
+  }, [user]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: name === "creditLimit" ? parseInt(value) || 0 : value,
+    }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // validations
-    if (!form.creditLimit || parseInt(form.creditLimit) < 10000) {
+    if (form.creditLimit < 10000) {
       setError("Minimum credit limit is ₹10,000");
       return;
     }
@@ -54,21 +51,35 @@ export default function ApplyCreditCardPage() {
     setIsSubmitting(true);
 
     try {
-      const card = addCreditCard({
+      const newCard = await addCreditCard({
         name: form.name,
         type: form.type,
-        creditLimit: parseInt(form.creditLimit),
+        creditLimit: form.creditLimit,
       });
-      setCardNumber(card.number);
-      setSuccess(true);
+
+      if (newCard) {
+        setCardNumber(newCard.number);
+        setSuccess(true);
+      } else {
+        setError("Failed to apply for credit card. Please try again.");
+      }
     } catch (err) {
-      setError("Failed to apply for credit card. Please try again.");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#031d44] to-[#04395e] p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
+          <p className="mt-4 text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#031d44] to-[#04395e] flex items-center justify-center p-4">

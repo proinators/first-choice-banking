@@ -1,65 +1,23 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  type: 'credit' | 'debit';
-  status: 'completed' | 'pending' | 'failed';
-  category: string;
-  reference: string;
-  account: string;
-}
-
-interface Account {
-  id: number;
-  name: string;
-  number: string;
-  type: string;
-  balance: number;
-  available?: number;
-  creditLimit?: number;
-}
-
-interface FixedDeposit {
-  id: number;
-  accountNumber: string;
-  amount: number;
-  maturityDate: string;
-  interestRate: number;
-  tenure: number; // in months
-  startDate: string;
-  status: 'active' | 'matured' | 'closed';
-  fdNumber: string;
-  interestPayout: 'monthly' | 'quarterly' | 'maturity';
-  nominee?: string;
-}
-
-interface CreditCard {
-  id: number;
-  name: string; // Card holder name
-  number: string; // masked card number e.g., •••• 1234
-  type: string; // e.g., Standard, Gold, Platinum
-  creditLimit: number;
-  balance: number; // negative when spent
-  available: number;
-  issuedDate: string;
-}
+import { supabase } from '@/utils/supabaseClient';
+import { User } from '@supabase/supabase-js';
+import { Account, Transaction, FixedDeposit, CreditCard } from '@/types';
 
 interface BankingContextType {
+  user: User | null;
+  loading: boolean;
   accounts: Account[];
   transactions: Transaction[];
   fixedDeposits: FixedDeposit[];
   creditCards: CreditCard[];
-  updateAccount: (accountId: number, newBalance: number) => void;
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'reference'>) => void;
-  addFixedDeposit: (fd: Omit<FixedDeposit, 'id' | 'fdNumber' | 'status'>) => void;
-  addCreditCard: (card: Omit<CreditCard, 'id' | 'number' | 'available' | 'issuedDate' | 'balance'>) => CreditCard;
-  getAccountById: (id: number) => Account | undefined;
-  getFixedDepositById: (id: number) => FixedDeposit | undefined;
+  updateAccount: (accountId: string, newBalance: number) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'reference' | 'created_at' | 'account_id'> & { account_id: string }) => Promise<Transaction | null>;
+  addFixedDeposit: (fd: Omit<FixedDeposit, 'id' | 'fdNumber' | 'status' | 'user_id'>) => Promise<FixedDeposit | null>;
+  addCreditCard: (card: Omit<CreditCard, 'id' | 'number' | 'available' | 'issuedDate' | 'balance' | 'user_id'>) => Promise<CreditCard | null>;
+  getAccountById: (id: string) => Account | undefined;
+  getFixedDepositById: (id: string) => FixedDeposit | undefined;
 }
 
 const BankingContext = createContext<BankingContextType | undefined>(undefined);
@@ -73,269 +31,217 @@ export const useBanking = () => {
 };
 
 export const BankingProvider = ({ children }: { children: ReactNode }) => {
-  // Initialize with mock data
-  const [accounts, setAccounts] = useState<Account[]>([
-    { id: 1, name: 'Main Account', number: '•••• 7890', type: 'Savings', balance: 125000.50, available: 120000.00 },
-    { id: 2, name: 'Salary Account', number: '•••• 4321', type: 'Salary', balance: 350000.75, available: 350000.75 },
-    { id: 3, name: 'Credit Card', number: '•••• 5678', type: 'Credit Card', balance: -12500.30, available: 87500.00, creditLimit: 100000.00 },
-  ]);
-
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fixedDeposits, setFixedDeposits] = useState<FixedDeposit[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
 
-  // Load transactions from localStorage on initial render
   useEffect(() => {
-    const savedTransactions = localStorage.getItem('bankingTransactions');
-    if (savedTransactions) {
-      setTransactions(JSON.parse(savedTransactions));
-    } else {
-      // Initialize with some mock transactions if none exist
-      const initialTransactions: Transaction[] = [
-        {
-          id: '1',
-          date: new Date('2024-06-15T10:30:00').toISOString(),
-          description: 'Supermarket Purchase',
-          amount: 1250.50,
-          type: 'debit',
-          status: 'completed',
-          category: 'Groceries',
-          reference: 'TXN20240615001',
-          account: '•••• 7890'
-        },
-        {
-          id: '2',
-          date: new Date('2024-06-01T09:15:00').toISOString(),
-          description: 'Salary Credit',
-          amount: 125000.00,
-          type: 'credit',
-          status: 'completed',
-          category: 'Salary',
-          reference: 'SAL20240601001',
-          account: '•••• 7890'
-        },
-        {
-          id: '3',
-          date: new Date('2024-05-28T14:20:00').toISOString(),
-          description: 'Electricity Bill',
-          amount: 4500.75,
-          type: 'debit',
-          status: 'completed',
-          category: 'Utilities',
-          reference: 'BL20240528001',
-          account: '•••• 7890'
-        },
-        {
-          id: '4',
-          date: new Date('2024-05-25T11:45:00').toISOString(),
-          description: 'UPI Transfer',
-          amount: 2500.00,
-          type: 'debit',
-          status: 'completed',
-          category: 'Transfer',
-          reference: 'UPI20240525001',
-          account: '•••• 7890'
-        },
-        {
-          id: '5',
-          date: new Date('2024-05-20T16:30:00').toISOString(),
-          description: 'Mobile Recharge',
-          amount: 599.00,
-          type: 'debit',
-          status: 'completed',
-          category: 'Mobile',
-          reference: 'RCH20240520001',
-          account: '•••• 4321'
-        },
-        {
-          id: '6',
-          date: new Date('2024-05-18T13:15:00').toISOString(),
-          description: 'Credit Card Payment',
-          amount: 15000.00,
-          type: 'debit',
-          status: 'pending',
-          category: 'Credit Card',
-          reference: 'CC20240518001',
-          account: '•••• 7890'
-        },
-        {
-          id: '7',
-          date: new Date('2024-04-28T16:45:00').toISOString(),
-          description: 'Internet Bill',
-          amount: 999.00,
-          type: 'debit',
-          status: 'failed',
-          category: 'Utilities',
-          reference: 'NET20240425001',
-          account: '•••• 7890'
+    const fetchUserAndData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (user) {
+        // Fetch accounts
+        const { data: accountsData, error: accountsError } = await supabase
+          .from('accounts')
+          .select('*')
+          .eq('user_id', user.id);
+        if (accountsData) setAccounts(accountsData);
+
+        // Fetch transactions, fixed deposits, and credit cards
+        if (accountsData) {
+          const accountIds = accountsData.map(a => a.id);
+          const { data: transactionsData } = await supabase
+            .from('transactions')
+            .select('*')
+            .in('account_id', accountIds);
+          if (transactionsData) setTransactions(transactionsData);
         }
-      ];
-      setTransactions(initialTransactions);
-      localStorage.setItem('bankingTransactions', JSON.stringify(initialTransactions));
-    }
-  }, []);
 
-  // Load fixed deposits from localStorage
-  useEffect(() => {
-    const savedFDs = localStorage.getItem('bankingFixedDeposits');
-    if (savedFDs) {
-      setFixedDeposits(JSON.parse(savedFDs));
-    } else {
-      // Initialize with some mock fixed deposits
-      const initialFDs: FixedDeposit[] = [
-        {
-          id: 1,
-          accountNumber: '•••• 1234',
-          amount: 500000.00,
-          maturityDate: '2024-12-31',
-          interestRate: 6.5,
-          tenure: 12,
-          startDate: '2024-01-01',
-          status: 'active',
-          fdNumber: 'FD001234',
-          interestPayout: 'maturity',
-          nominee: 'John Doe Jr.'
-        },
-        {
-          id: 2,
-          accountNumber: '•••• 5678',
-          amount: 1000000.00,
-          maturityDate: '2025-06-30',
-          interestRate: 7.0,
-          tenure: 18,
-          startDate: '2024-01-01',
-          status: 'active',
-          fdNumber: 'FD005678',
-          interestPayout: 'quarterly',
-          nominee: 'Jane Smith Jr.'
+        const { data: fdsData } = await supabase
+          .from('fixed_deposits')
+          .select('*')
+          .eq('user_id', user.id);
+        if (fdsData) setFixedDeposits(fdsData);
+
+        const { data: cardsData } = await supabase
+          .from('credit_cards')
+          .select('*')
+          .eq('user_id', user.id);
+        if (cardsData) setCreditCards(cardsData);
+      
+      }
+      setLoading(false);
+    };
+
+    fetchUserAndData();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN') {
+            setUser(session?.user ?? null);
+            fetchUserAndData();
+        } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setAccounts([]);
+            setTransactions([]);
+            setFixedDeposits([]);
+            setCreditCards([]);
         }
-      ];
-      setFixedDeposits(initialFDs);
-      localStorage.setItem('bankingFixedDeposits', JSON.stringify(initialFDs));
-    }
+    });
+
+    return () => {
+        authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  // Save transactions to localStorage whenever they change
-  useEffect(() => {
-    if (transactions.length > 0) {
-      localStorage.setItem('bankingTransactions', JSON.stringify(transactions));
-    }
-  }, [transactions]);
+  const updateAccount = async (accountId: string, newBalance: number) => {
+    const { data, error } = await supabase
+      .from('accounts')
+      .update({ balance: newBalance })
+      .eq('id', accountId);
 
-  // Load credit cards from localStorage
-  useEffect(() => {
-    const savedCards = localStorage.getItem('bankingCreditCards');
-    if (savedCards) {
-      setCreditCards(JSON.parse(savedCards));
+    if (!error) {
+      setAccounts(prevAccounts =>
+        prevAccounts.map(account =>
+          account.id === accountId
+            ? { ...account, balance: newBalance, available: newBalance - (account.creditLimit || 0) }
+            : account
+        )
+      );
     }
-  }, []);
-
-  // Save credit cards to localStorage whenever they change
-  useEffect(() => {
-    if (creditCards.length > 0) {
-      localStorage.setItem('bankingCreditCards', JSON.stringify(creditCards));
-    }
-  }, [creditCards]);
-
-  // Save fixed deposits to localStorage whenever they change
-  useEffect(() => {
-    if (fixedDeposits.length > 0) {
-      localStorage.setItem('bankingFixedDeposits', JSON.stringify(fixedDeposits));
-    }
-  }, [fixedDeposits]);
-
-  const updateAccount = (accountId: number, newBalance: number) => {
-    setAccounts(prevAccounts =>
-      prevAccounts.map(account =>
-        account.id === accountId
-          ? { ...account, balance: newBalance, available: newBalance - (account.creditLimit || 0) }
-          : account
-      )
-    );
   };
 
-  const addTransaction = (transaction: Omit<Transaction, 'id' | 'reference'>) => {
-    const newTransaction: Transaction = {
+  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'reference' | 'created_at' | 'account_id'> & { account_id: string }): Promise<Transaction | null> => {
+    const newTransaction = {
       ...transaction,
-      id: Date.now().toString(),
       reference: `TXN${Date.now()}`,
     };
-    
-    setTransactions(prev => [newTransaction, ...prev]);
-    
-    // Update account balance
-    const account = accounts.find(acc => acc.number === transaction.account);
-    if (account) {
-      const newBalance = transaction.type === 'credit'
-        ? account.balance + transaction.amount
-        : account.balance - transaction.amount;
-      
-      updateAccount(account.id, newBalance);
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([newTransaction])
+      .select()
+      .single();
+
+    if (data) {
+      setTransactions(prev => [data, ...prev]);
+      // Update account balance
+      const account = accounts.find(acc => acc.id === transaction.account_id);
+      if (account) {
+        const newBalance = transaction.type === 'credit'
+          ? account.balance + transaction.amount
+          : account.balance - transaction.amount;
+        await updateAccount(account.id, newBalance);
+      }
+      return data;
     }
-    
-    return newTransaction;
+    return null;
   };
 
-  const addCreditCard = (card: Omit<CreditCard, 'id' | 'number' | 'available' | 'issuedDate' | 'balance'>) => {
+  const addCreditCard = async (card: Omit<CreditCard, 'id' | 'number' | 'available' | 'issuedDate' | 'balance' | 'user_id'>): Promise<CreditCard | null> => {
+    if (!user) throw new Error('User not authenticated');
+
     const newCardNumber = `•••• ${Math.floor(1000 + Math.random() * 9000)}`;
-    const newCard: CreditCard = {
-      ...card,
-      id: Date.now(),
-      number: newCardNumber,
-      balance: 0,
-      available: card.creditLimit,
-      issuedDate: new Date().toISOString(),
+    const cardToInsert = {
+        ...card,
+        user_id: user.id,
+        number: newCardNumber,
+        balance: 0,
+        available: card.creditLimit,
+        issuedDate: new Date().toISOString(),
     };
+
+    // This should be a single transaction in a real app
+    const { data: newCard, error: cardError } = await supabase
+        .from('credit_cards')
+        .insert(cardToInsert)
+        .select()
+        .single();
+
+    if (cardError) {
+      console.error('Error adding credit card:', cardError);
+      return null;
+    }
+
+    const { data: newAccount, error: accountError } = await supabase
+        .from('accounts')
+        .insert({
+            user_id: user.id,
+            name: `${card.type} Credit Card`,
+            number: newCard.number,
+            type: 'Credit Card',
+            balance: 0,
+            credit_limit: card.creditLimit,
+        })
+        .select()
+        .single();
+
+    if (accountError) {
+        console.error('Error adding account for credit card:', accountError);
+        // Optionally, delete the created credit card entry
+        return null;
+    }
 
     setCreditCards(prev => [newCard, ...prev]);
-
-    // Also add to accounts list so it shows up with others
-    const newAccount: Account = {
-      id: newCard.id,
-      name: `${card.type} Credit Card`,
-      number: newCard.number,
-      type: 'Credit Card',
-      balance: 0,
-      available: newCard.available,
-      creditLimit: card.creditLimit,
-    };
     setAccounts(prev => [...prev, newAccount]);
 
     return newCard;
   };
 
-  const addFixedDeposit = (fd: Omit<FixedDeposit, 'id' | 'fdNumber' | 'status'>) => {
-    const newFD: FixedDeposit = {
-      ...fd,
-      id: Date.now(),
-      fdNumber: `FD${Date.now().toString().slice(-6)}`,
-      status: 'active',
+  const addFixedDeposit = async (fd: Omit<FixedDeposit, 'id' | 'fdNumber' | 'status' | 'user_id'>): Promise<FixedDeposit | null> => {
+    if (!user) throw new Error('User not authenticated');
+
+    const fdToInsert = {
+        ...fd,
+        user_id: user.id,
+        fdNumber: `FD${Date.now().toString().slice(-6)}`,
+        status: 'active' as const,
     };
-    
+
+    const { data: newFD, error } = await supabase
+        .from('fixed_deposits')
+        .insert(fdToInsert)
+        .select()
+        .single();
+
+    if (error) {
+      console.error('Error adding fixed deposit:', error);
+      return null;
+    }
+
     setFixedDeposits(prev => [newFD, ...prev]);
-    
+
     // Add a transaction for the FD creation
-    addTransaction({
-      account: fd.accountNumber,
-      type: 'debit',
-      amount: fd.amount,
-      description: `Fixed Deposit - ${newFD.fdNumber}`,
-      date: new Date().toISOString(),
-      status: 'completed',
-      category: 'Fixed Deposit',
-    });
-    
+    const sourceAccount = accounts.find(acc => acc.number === fd.accountNumber);
+    if (sourceAccount) {
+        await addTransaction({
+            account_id: sourceAccount.id,
+            account: fd.accountNumber,
+            type: 'debit',
+            amount: fd.amount,
+            description: `Fixed Deposit - ${newFD.fdNumber}`,
+            date: new Date().toISOString(),
+            status: 'completed',
+            category: 'Fixed Deposit',
+        });
+    }
+
     return newFD;
   };
 
-  const getAccountById = (id: number) => {
+  const getAccountById = (id: string) => {
     return accounts.find(account => account.id === id);
   };
 
-  const getFixedDepositById = (id: number) => {
+  const getFixedDepositById = (id: string) => {
     return fixedDeposits.find(fd => fd.id === id);
   };
 
+  // This logic should ideally be handled by a backend process or a database trigger.
+  // For now, we'll keep it on the client side.
   // Update FD status to matured when they reach maturity date
   useEffect(() => {
     const today = new Date();
@@ -353,6 +259,8 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
   return (
     <BankingContext.Provider
       value={{
+        user,
+        loading,
         accounts,
         transactions,
         fixedDeposits,
