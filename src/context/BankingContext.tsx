@@ -38,13 +38,26 @@ interface FixedDeposit {
   nominee?: string;
 }
 
+interface CreditCard {
+  id: number;
+  name: string; // Card holder name
+  number: string; // masked card number e.g., •••• 1234
+  type: string; // e.g., Standard, Gold, Platinum
+  creditLimit: number;
+  balance: number; // negative when spent
+  available: number;
+  issuedDate: string;
+}
+
 interface BankingContextType {
   accounts: Account[];
   transactions: Transaction[];
   fixedDeposits: FixedDeposit[];
+  creditCards: CreditCard[];
   updateAccount: (accountId: number, newBalance: number) => void;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'reference'>) => void;
   addFixedDeposit: (fd: Omit<FixedDeposit, 'id' | 'fdNumber' | 'status'>) => void;
+  addCreditCard: (card: Omit<CreditCard, 'id' | 'number' | 'available' | 'issuedDate' | 'balance'>) => CreditCard;
   getAccountById: (id: number) => Account | undefined;
   getFixedDepositById: (id: number) => FixedDeposit | undefined;
 }
@@ -69,6 +82,7 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fixedDeposits, setFixedDeposits] = useState<FixedDeposit[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
 
   // Load transactions from localStorage on initial render
   useEffect(() => {
@@ -208,6 +222,21 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [transactions]);
 
+  // Load credit cards from localStorage
+  useEffect(() => {
+    const savedCards = localStorage.getItem('bankingCreditCards');
+    if (savedCards) {
+      setCreditCards(JSON.parse(savedCards));
+    }
+  }, []);
+
+  // Save credit cards to localStorage whenever they change
+  useEffect(() => {
+    if (creditCards.length > 0) {
+      localStorage.setItem('bankingCreditCards', JSON.stringify(creditCards));
+    }
+  }, [creditCards]);
+
   // Save fixed deposits to localStorage whenever they change
   useEffect(() => {
     if (fixedDeposits.length > 0) {
@@ -245,6 +274,34 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
     }
     
     return newTransaction;
+  };
+
+  const addCreditCard = (card: Omit<CreditCard, 'id' | 'number' | 'available' | 'issuedDate' | 'balance'>) => {
+    const newCardNumber = `•••• ${Math.floor(1000 + Math.random() * 9000)}`;
+    const newCard: CreditCard = {
+      ...card,
+      id: Date.now(),
+      number: newCardNumber,
+      balance: 0,
+      available: card.creditLimit,
+      issuedDate: new Date().toISOString(),
+    };
+
+    setCreditCards(prev => [newCard, ...prev]);
+
+    // Also add to accounts list so it shows up with others
+    const newAccount: Account = {
+      id: newCard.id,
+      name: `${card.type} Credit Card`,
+      number: newCard.number,
+      type: 'Credit Card',
+      balance: 0,
+      available: newCard.available,
+      creditLimit: card.creditLimit,
+    };
+    setAccounts(prev => [...prev, newAccount]);
+
+    return newCard;
   };
 
   const addFixedDeposit = (fd: Omit<FixedDeposit, 'id' | 'fdNumber' | 'status'>) => {
@@ -299,9 +356,11 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
         accounts,
         transactions,
         fixedDeposits,
+        creditCards,
         updateAccount,
         addTransaction,
         addFixedDeposit,
+        addCreditCard,
         getAccountById,
         getFixedDepositById,
       }}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loadCaptchaEnginge, LoadCanvasTemplate, validateCaptcha } from 'react-simple-captcha';
 
-// Hardcoded user data
+// Hardcoded user data, to fetch from database
 const users = [
   { email: 'john.doe@example.com', password: 'password123', name: 'John Doe', accountNumber: '1234567890' },
   { email: 'jane.smith@example.com', password: 'securepass', name: 'Jane Smith', accountNumber: '0987654321' },

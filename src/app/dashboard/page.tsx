@@ -144,7 +144,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
             <button
               onClick={() => router.push('/transfer')}
               className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-colors group"
@@ -205,6 +205,21 @@ export default function DashboardPage() {
                 <div className="text-left">
                   <h3 className="text-lg font-medium text-white">New Fixed Deposit</h3>
                   <p className="text-sm text-blue-200">Earn higher interest rates</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => router.push('/credit-cards/apply')}
+              className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-colors group"
+            >
+              <div className="flex items-center">
+                <div className="p-3 rounded-lg bg-rose-500/20 text-rose-400 mr-4 group-hover:bg-rose-500/30 transition-colors">
+                  <CreditCardIcon className="h-6 w-6" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-medium text-white">Apply Credit Card</h3>
+                  <p className="text-sm text-blue-200">Get a new credit card</p>
                 </div>
               </div>
             </button>
