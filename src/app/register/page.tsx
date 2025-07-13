@@ -32,8 +32,18 @@ export default function RegisterPage() {
     }
 
     if (user) {
-        // The user is signed up, and a trigger should handle inserting into public.users
-        // For now, let's assume a trigger is set up or we can just navigate to the dashboard
+        // Persist basic profile info in the public.users table so that
+        // the rest of the app can join on user_id without relying on a DB trigger.
+        // If the row already exists (e.g. because a trigger INSERTed it) we ignore the error.
+        const { error: profileErr } = await supabase.from('users').insert({
+          id: user.id, // use auth uid as PK
+          email,
+          full_name: fullName,
+        });
+        if (profileErr && profileErr.code !== '23505' /* unique violation */) {
+          setError(profileErr.message);
+          return;
+        }
         router.push('/dashboard');
     }
   };

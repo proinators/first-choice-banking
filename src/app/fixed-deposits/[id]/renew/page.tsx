@@ -71,7 +71,7 @@ export default function RenewFixedDepositPage() {
     setUser(JSON.parse(userData));
 
     // Get the original FD details
-    const fdId = parseInt(params.id as string);
+    const fdId = params.id as string;
     const fd = getFixedDepositById(fdId);
     
     if (!fd) {
@@ -220,7 +220,7 @@ export default function RenewFixedDepositPage() {
       maturityDate.setMonth(maturityDate.getMonth() + renewalDetails.newTenure);
 
       // Create new FD with maturity amount as principal
-      const newFD = addFixedDeposit({
+      const newFD = await addFixedDeposit({
         accountNumber: originalFD.accountNumber,
         amount: maturityAmount,
         maturityDate: maturityDate.toISOString(),
@@ -229,9 +229,10 @@ export default function RenewFixedDepositPage() {
         startDate: startDate.toISOString(),
         interestPayout: renewalDetails.newInterestPayout,
         nominee: renewalDetails.nominee,
+
       });
 
-      setNewFdNumber(newFD.fdNumber);
+      setNewFdNumber(newFD?.fdNumber || '');
       setSuccess(true);
       setStep(4);
     } catch (err) {

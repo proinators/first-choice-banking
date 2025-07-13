@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  ArrowPathIcon, 
-  ArrowUpTrayIcon, 
-  ArrowDownTrayIcon, 
-  CheckCircleIcon, 
-  XCircleIcon, 
+import {
+  ArrowPathIcon,
+  ArrowUpTrayIcon,
+  ArrowDownTrayIcon,
+  CheckCircleIcon,
+  XCircleIcon,
   ArrowRightCircleIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -91,29 +91,25 @@ export default function TransferPage() {
     setError('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Generate a random transaction reference
-      const ref = 'TXN' + Math.random().toString(36).substring(2, 10).toUpperCase();
-      
-      // Add transaction to context
-      addTransaction({
-        id: Date.now().toString(),
-        account: transferDetails.fromAccount,
-        type: 'debit',
-        amount: parseFloat(transferDetails.amount),
-        description: `Transfer to ${transferDetails.recipientName}`,
-        date: new Date().toISOString(),
-        status: 'completed',
-        reference: ref
+      const res = await fetch('/api/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_account_id: transferDetails.fromAccount,
+          to_account_number: transferDetails.recipientAccount,
+          amount: Number(transferDetails.amount),
+          remarks: transferDetails.remarks,
+        }),
       });
-
-      setTransactionRef(ref);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Transfer failed');
+      }
+      setTransactionRef(data.reference);
       setTransferSuccess(true);
       setStep(4);
-    } catch (err) {
-      setError('Transfer failed. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Transfer failed. Please try again.');
       setTransferSuccess(false);
     } finally {
       setIsSubmitting(false);
@@ -130,7 +126,7 @@ export default function TransferPage() {
   };
 
   const getFromAccount = () => {
-    return accounts.find(acc => acc.id === Number(transferDetails.fromAccount));
+    return accounts.find(acc => acc.id === (transferDetails.fromAccount));
   };
 
   const renderStepIndicator = () => {
@@ -144,26 +140,24 @@ export default function TransferPage() {
     return (
       <div className="flex items-center justify-between mb-8 relative">
         <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/10 -z-10"></div>
-        {steps.map((stepItem) => (
-          <div key={stepItem.number} className="flex flex-col items-center z-10">
-            <div 
-              className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step > stepItem.number 
-                  ? 'bg-green-500 text-white' 
-                  : step === stepItem.number 
-                    ? 'bg-[#66c3ff] text-[#031d44]' 
+        { steps.map((stepItem) => (
+          <div key={ stepItem.number } className="flex flex-col items-center z-10">
+            <div
+              className={ `h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium ${step > stepItem.number
+                  ? 'bg-green-500 text-white'
+                  : step === stepItem.number
+                    ? 'bg-[#66c3ff] text-[#031d44]'
                     : 'bg-white/20 text-white'
-              }`}
+                }` }
             >
-              {step > stepItem.number ? <CheckCircleIcon className="h-5 w-5" /> : stepItem.number}
+              { step > stepItem.number ? <CheckCircleIcon className="h-5 w-5" /> : stepItem.number }
             </div>
-            <span className={`text-xs mt-2 ${
-              step >= stepItem.number ? 'text-white' : 'text-blue-200'
-            }`}>
-              {stepItem.label}
+            <span className={ `text-xs mt-2 ${step >= stepItem.number ? 'text-white' : 'text-blue-200'
+              }` }>
+              { stepItem.label }
             </span>
           </div>
-        ))}
+        )) }
       </div>
     );
   };
@@ -180,16 +174,16 @@ export default function TransferPage() {
               <select
                 id="fromAccount"
                 name="fromAccount"
-                value={transferDetails.fromAccount}
-                onChange={handleInputChange}
+                value={ transferDetails.fromAccount }
+                onChange={ handleInputChange }
                 className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-[#66c3ff] focus:border-transparent"
               >
                 <option value="">Select Account</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name} •••• {account.number.slice(-4)} - {formatCurrency(account.balance || 0)}
+                { accounts.map((account) => (
+                  <option key={ account.id } value={ account.id }>
+                    { account.name } •••• { account.number.slice(-4) } - { formatCurrency(account.balance || 0) }
                   </option>
-                ))}
+                )) }
               </select>
             </div>
 
@@ -205,8 +199,8 @@ export default function TransferPage() {
                   type="number"
                   id="amount"
                   name="amount"
-                  value={transferDetails.amount}
-                  onChange={handleInputChange}
+                  value={ transferDetails.amount }
+                  onChange={ handleInputChange }
                   placeholder="0.00"
                   className="w-full bg-white/5 border border-white/20 rounded-lg pl-10 pr-4 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-[#66c3ff] focus:border-transparent"
                 />
@@ -220,8 +214,8 @@ export default function TransferPage() {
               <select
                 id="transferMethod"
                 name="transferMethod"
-                value={transferDetails.transferMethod}
-                onChange={handleInputChange}
+                value={ transferDetails.transferMethod }
+                onChange={ handleInputChange }
                 className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#66c3ff] focus:border-transparent"
               >
                 <option value="IMPS">IMPS (Instant)</option>
@@ -239,15 +233,15 @@ export default function TransferPage() {
                 type="text"
                 id="remarks"
                 name="remarks"
-                value={transferDetails.remarks}
-                onChange={handleInputChange}
+                value={ transferDetails.remarks }
+                onChange={ handleInputChange }
                 placeholder="Add a note"
                 className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-[#66c3ff] focus:border-transparent"
               />
             </div>
           </div>
         );
-      
+
       case 2:
         return (
           <div className="space-y-6">
@@ -259,8 +253,8 @@ export default function TransferPage() {
                 type="text"
                 id="recipientName"
                 name="recipientName"
-                value={transferDetails.recipientName}
-                onChange={handleInputChange}
+                value={ transferDetails.recipientName }
+                onChange={ handleInputChange }
                 placeholder="Enter recipient's full name"
                 className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-[#66c3ff] focus:border-transparent"
               />
@@ -274,8 +268,8 @@ export default function TransferPage() {
                 type="text"
                 id="recipientAccount"
                 name="recipientAccount"
-                value={transferDetails.recipientAccount}
-                onChange={handleInputChange}
+                value={ transferDetails.recipientAccount }
+                onChange={ handleInputChange }
                 placeholder="Enter account number"
                 className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-[#66c3ff] focus:border-transparent"
               />
@@ -289,60 +283,60 @@ export default function TransferPage() {
                 type="text"
                 id="ifscCode"
                 name="ifscCode"
-                value={transferDetails.ifscCode}
-                onChange={handleInputChange}
+                value={ transferDetails.ifscCode }
+                onChange={ handleInputChange }
                 placeholder="Enter IFSC code"
                 className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-[#66c3ff] focus:border-transparent"
               />
             </div>
           </div>
         );
-      
+
       case 3:
         const fromAccount = getFromAccount();
         return (
           <div className="space-y-6">
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
               <h3 className="text-lg font-medium text-white mb-4">Transfer Summary</h3>
-              
+
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-blue-200">From Account</span>
                   <span className="text-white text-right">
-                    {fromAccount?.name}<br />
-                    •••• {fromAccount?.number.toString().slice(-4)}
+                    { fromAccount?.name }<br />
+                    •••• { fromAccount?.number.toString().slice(-4) }
                   </span>
                 </div>
-                
+
                 <div className="flex justify-between">
                   <span className="text-blue-200">To Account</span>
                   <span className="text-white text-right">
-                    {transferDetails.recipientName}<br />
-                    •••• {transferDetails.recipientAccount.slice(-4)}
+                    { transferDetails.recipientName }<br />
+                    •••• { transferDetails.recipientAccount.slice(-4) }
                   </span>
                 </div>
-                
+
                 <div className="flex justify-between">
                   <span className="text-blue-200">Amount</span>
                   <span className="text-2xl font-bold text-white">
-                    {formatCurrency(parseFloat(transferDetails.amount) || 0)}
+                    { formatCurrency(parseFloat(transferDetails.amount) || 0) }
                   </span>
                 </div>
-                
+
                 <div className="flex justify-between">
                   <span className="text-blue-200">Transfer Method</span>
-                  <span className="text-white">{transferDetails.transferMethod}</span>
+                  <span className="text-white">{ transferDetails.transferMethod }</span>
                 </div>
-                
-                {transferDetails.remarks && (
+
+                { transferDetails.remarks && (
                   <div className="flex justify-between">
                     <span className="text-blue-200">Remarks</span>
-                    <span className="text-white text-right">{transferDetails.remarks}</span>
+                    <span className="text-white text-right">{ transferDetails.remarks }</span>
                   </div>
-                )}
+                ) }
               </div>
             </div>
-            
+
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -360,11 +354,11 @@ export default function TransferPage() {
             </div>
           </div>
         );
-      
+
       case 4:
         return (
           <div className="text-center py-8">
-            {transferSuccess ? (
+            { transferSuccess ? (
               <>
                 <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-500/20 mb-4">
                   <CheckCircleIcon className="h-10 w-10 text-green-400" />
@@ -374,25 +368,25 @@ export default function TransferPage() {
                 <div className="bg-white/5 border border-white/10 rounded-lg p-6 max-w-md mx-auto text-left space-y-4">
                   <div className="flex justify-between">
                     <span className="text-blue-200">Transaction ID</span>
-                    <span className="text-white font-mono">{transactionRef}</span>
+                    <span className="text-white font-mono">{ transactionRef }</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-blue-200">Amount</span>
                     <span className="text-white font-medium">
-                      {formatCurrency(parseFloat(transferDetails.amount) || 0)}
+                      { formatCurrency(parseFloat(transferDetails.amount) || 0) }
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-blue-200">Recipient</span>
                     <span className="text-white text-right">
-                      {transferDetails.recipientName}<br />
-                      •••• {transferDetails.recipientAccount.slice(-4)}
+                      { transferDetails.recipientName }<br />
+                      •••• { transferDetails.recipientAccount.slice(-4) }
                     </span>
                   </div>
                 </div>
                 <div className="mt-8">
                   <button
-                    onClick={() => {
+                    onClick={ () => {
                       // Reset form and go back to dashboard
                       setTransferDetails({
                         fromAccount: '',
@@ -408,7 +402,7 @@ export default function TransferPage() {
                       setTransferSuccess(null);
                       setTransactionRef('');
                       router.push('/dashboard');
-                    }}
+                    } }
                     className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-[#66c3ff] hover:bg-[#4ab4ff] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c3ff]"
                   >
                     Back to Dashboard
@@ -422,19 +416,19 @@ export default function TransferPage() {
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-2">Transfer Failed</h3>
                 <p className="text-blue-200 mb-6">
-                  {error || 'There was an error processing your transfer. Please try again.'}
+                  { error || 'There was an error processing your transfer. Please try again.' }
                 </p>
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={ () => setStep(1) }
                   className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-[#66c3ff] hover:bg-[#4ab4ff] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c3ff]"
                 >
                   Try Again
                 </button>
               </>
-            )}
+            ) }
           </div>
         );
-      
+
       default:
         return null;
     }
@@ -443,59 +437,59 @@ export default function TransferPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#031d44] to-[#04395e] text-white">
       <div className="max-w-2xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
+        {/* Header */ }
         <div className="flex items-center justify-between mb-8">
           <button
-            onClick={handleBack}
+            onClick={ handleBack }
             className="flex items-center text-blue-200 hover:text-white"
           >
             <ArrowLeftIcon className="h-5 w-5 mr-1" />
             <span>Back</span>
           </button>
           <h1 className="text-2xl font-bold">
-            {step === 4 
+            { step === 4
               ? transferSuccess ? 'Transfer Complete' : 'Transfer Failed'
-              : 'Transfer Money'}
+              : 'Transfer Money' }
           </h1>
-          <div className="w-20"></div> {/* Spacer for alignment */}
+          <div className="w-20"></div> {/* Spacer for alignment */ }
         </div>
 
-        {step < 4 && renderStepIndicator()}
+        { step < 4 && renderStepIndicator() }
 
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 shadow-lg">
-          {error && step < 4 && (
+          { error && step < 4 && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <XCircleIcon className="h-5 w-5 text-red-400" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-200">{error}</p>
+                  <p className="text-sm text-red-200">{ error }</p>
                 </div>
               </div>
             </div>
-          )}
+          ) }
 
-          {renderStepContent()}
+          { renderStepContent() }
 
-          {step < 3 && (
+          { step < 3 && (
             <div className="mt-8 flex justify-end">
               <button
                 type="button"
-                onClick={handleNext}
+                onClick={ handleNext }
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-[#66c3ff] hover:bg-[#4ab4ff] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c3ff]"
               >
                 Next
                 <ArrowRightIcon className="ml-2 -mr-1 h-5 w-5" />
               </button>
             </div>
-          )}
+          ) }
 
-          {step === 3 && (
+          { step === 3 && (
             <div className="mt-8 flex justify-between">
               <button
                 type="button"
-                onClick={handleBack}
+                onClick={ handleBack }
                 className="inline-flex items-center px-6 py-3 border border-white/20 text-base font-medium rounded-lg shadow-sm text-white bg-transparent hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c3ff]"
               >
                 <ArrowLeftIcon className="mr-2 -ml-1 h-5 w-5" />
@@ -503,11 +497,11 @@ export default function TransferPage() {
               </button>
               <button
                 type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
+                onClick={ handleSubmit }
+                disabled={ isSubmitting }
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? (
+                { isSubmitting ? (
                   <>
                     <ArrowPathIcon className="animate-spin -ml-1 mr-2 h-5 w-5" />
                     Processing...
@@ -517,10 +511,10 @@ export default function TransferPage() {
                     Confirm & Transfer
                     <ArrowRightIcon className="ml-2 -mr-1 h-5 w-5" />
                   </>
-                )}
+                ) }
               </button>
             </div>
-          )}
+          ) }
         </div>
       </div>
     </div>

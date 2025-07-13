@@ -173,7 +173,7 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
             name: `${card.type} Credit Card`,
             number: newCard.number,
             type: 'Credit Card',
-            balance: 0,
+            balance: card.creditLimit,
             credit_limit: card.creditLimit,
         })
         .select()
@@ -185,8 +185,9 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
         return null;
     }
 
+    // For client state, ensure available field reflects remaining credit
     setCreditCards(prev => [newCard, ...prev]);
-    setAccounts(prev => [...prev, newAccount]);
+    setAccounts(prev => [...prev, { ...newAccount, available: newAccount.balance - (newAccount.credit_limit || 0) }]);
 
     return newCard;
   };

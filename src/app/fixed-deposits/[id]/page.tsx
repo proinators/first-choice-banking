@@ -29,7 +29,7 @@ export default function FixedDepositDetailsPage() {
     setUser(JSON.parse(userData));
 
     // Get the FD details
-    const fdId = parseInt(params.id as string);
+    const fdId = params.id as string;
     const fixedDeposit = getFixedDepositById(fdId);
     
     if (!fixedDeposit) {
