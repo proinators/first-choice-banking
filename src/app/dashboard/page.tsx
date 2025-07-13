@@ -11,20 +11,18 @@ import {
   DocumentTextIcon, 
   ArrowRightCircleIcon,
   UserCircleIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  PlusIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { useBanking } from '@/context/BankingContext';
 import generateStatement from '@/utils/generateStatement';
 
-// Mock data for fixed deposits
-const fixedDeposits = [
-  { id: 1, accountNumber: '•••• 1234', amount: 500000.00, maturityDate: '2024-12-31', interestRate: '6.5%' },
-  { id: 2, accountNumber: '•••• 5678', amount: 1000000.00, maturityDate: '2025-06-30', interestRate: '7.0%' },
-];
+// No mock data needed - using context data
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { accounts, transactions } = useBanking();
+  const { accounts, transactions, fixedDeposits } = useBanking();
   const [user, setUser] = useState<{name: string, email?: string} | null>(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -146,7 +144,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <button
               onClick={() => router.push('/transfer')}
               className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-colors group"
@@ -192,6 +190,21 @@ export default function DashboardPage() {
                 <div className="text-left">
                   <h3 className="text-lg font-medium text-white">Transactions</h3>
                   <p className="text-sm text-blue-200">View all transactions</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => router.push('/fixed-deposits/new')}
+              className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 hover:bg-white/20 transition-colors group"
+            >
+              <div className="flex items-center">
+                <div className="p-3 rounded-lg bg-orange-500/20 text-orange-400 mr-4 group-hover:bg-orange-500/30 transition-colors">
+                  <PlusIcon className="h-6 w-6" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-medium text-white">New Fixed Deposit</h3>
+                  <p className="text-sm text-blue-200">Earn higher interest rates</p>
                 </div>
               </div>
             </button>
@@ -257,39 +270,108 @@ export default function DashboardPage() {
             {/* Fixed Deposits */}
             <div>
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 shadow-lg">
-                <div className="mb-6">
+                <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold text-white">Fixed Deposits</h2>
+                  <button
+                    onClick={() => router.push('/fixed-deposits/new')}
+                    className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                    title="Open New Fixed Deposit"
+                  >
+                    <PlusIcon className="h-5 w-5" />
+                  </button>
                 </div>
 
                 {fixedDeposits.length > 0 ? (
                   <div className="space-y-4">
-                    {fixedDeposits.map((deposit) => (
-                      <div
-                        key={deposit.id}
-                        className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg p-4 transition-colors"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium text-white">Fixed Deposit</h3>
-                            <p className="text-sm text-blue-200">{deposit.accountNumber}</p>
-                            <p className="text-2xl font-bold text-white mt-2">
-                              {formatCurrency(deposit.amount)}
-                            </p>
-                            <div className="grid grid-cols-2 gap-4 mt-3">
-                              <div>
-                                <p className="text-xs text-blue-200">Maturity Date</p>
-                                <p className="text-sm text-white font-medium">{formatDate(deposit.maturityDate)}</p>
+                    {fixedDeposits.map((deposit) => {
+                      const maturityDate = new Date(deposit.maturityDate);
+                      const today = new Date();
+                      const daysToMaturity = Math.ceil((maturityDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      const isMatured = daysToMaturity <= 0;
+                      
+                      return (
+                        <div
+                          key={deposit.id}
+                          className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg p-4 transition-colors"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="font-medium text-white">Fixed Deposit</h3>
+                                {isMatured ? (
+                                  <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">
+                                    Matured
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
+                                    Active
+                                  </span>
+                                )}
                               </div>
-                              <div>
+                              <p className="text-sm text-blue-200">{deposit.accountNumber}</p>
+                              <p className="text-2xl font-bold text-white mt-2">
+                                {formatCurrency(deposit.amount)}
+                              </p>
+                              <div className="grid grid-cols-2 gap-4 mt-3">
+                                <div>
+                                  <p className="text-xs text-blue-200">Maturity Date</p>
+                                  <p className="text-sm text-white font-medium">{formatDate(deposit.maturityDate)}</p>
+                                </div>
+                                                              <div>
                                 <p className="text-xs text-blue-200">Interest Rate</p>
-                                <p className="text-sm text-white font-medium">{deposit.interestRate}</p>
+                                <p className="text-sm text-white font-medium">{deposit.interestRate}%</p>
                               </div>
+                              </div>
+                              {!isMatured && daysToMaturity > 0 && (
+                                <div className="mt-3 p-2 bg-blue-500/10 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <ClockIcon className="h-4 w-4 text-blue-400" />
+                                    <span className="text-xs text-blue-200">
+                                      {daysToMaturity} days to maturity
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col space-y-2">
+                              <button
+                                onClick={() => router.push(`/fixed-deposits/${deposit.id}`)}
+                                className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                                title="View Details"
+                              >
+                                <ArrowRightCircleIcon className="h-5 w-5" />
+                              </button>
+                              {isMatured && (
+                                <button
+                                  onClick={() => router.push(`/fixed-deposits/${deposit.id}/renew`)}
+                                  className="p-2 text-green-400 hover:text-white hover:bg-green-500/20 rounded-full transition-colors"
+                                  title="Renew FD"
+                                >
+                                  <ArrowPathIcon className="h-5 w-5" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
+                      );
+                    })}
+                    
+                    <div className="mt-4 p-3 bg-[#1d6172]/20 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-blue-200">Total FD Value</p>
+                          <p className="text-lg font-semibold text-white">
+                            {formatCurrency(fixedDeposits.reduce((sum, fd) => sum + fd.amount, 0))}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => router.push('/fixed-deposits')}
+                          className="text-sm text-[#66c3ff] hover:text-[#99d6ff] transition-colors"
+                        >
+                          View All
+                        </button>
                       </div>
-                    ))}
-
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">

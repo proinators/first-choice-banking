@@ -24,12 +24,29 @@ interface Account {
   creditLimit?: number;
 }
 
+interface FixedDeposit {
+  id: number;
+  accountNumber: string;
+  amount: number;
+  maturityDate: string;
+  interestRate: number;
+  tenure: number; // in months
+  startDate: string;
+  status: 'active' | 'matured' | 'closed';
+  fdNumber: string;
+  interestPayout: 'monthly' | 'quarterly' | 'maturity';
+  nominee?: string;
+}
+
 interface BankingContextType {
   accounts: Account[];
   transactions: Transaction[];
+  fixedDeposits: FixedDeposit[];
   updateAccount: (accountId: number, newBalance: number) => void;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'reference'>) => void;
+  addFixedDeposit: (fd: Omit<FixedDeposit, 'id' | 'fdNumber' | 'status'>) => void;
   getAccountById: (id: number) => Account | undefined;
+  getFixedDepositById: (id: number) => FixedDeposit | undefined;
 }
 
 const BankingContext = createContext<BankingContextType | undefined>(undefined);
@@ -51,6 +68,7 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
   ]);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [fixedDeposits, setFixedDeposits] = useState<FixedDeposit[]>([]);
 
   // Load transactions from localStorage on initial render
   useEffect(() => {
@@ -143,12 +161,59 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // Load fixed deposits from localStorage
+  useEffect(() => {
+    const savedFDs = localStorage.getItem('bankingFixedDeposits');
+    if (savedFDs) {
+      setFixedDeposits(JSON.parse(savedFDs));
+    } else {
+      // Initialize with some mock fixed deposits
+      const initialFDs: FixedDeposit[] = [
+        {
+          id: 1,
+          accountNumber: '•••• 1234',
+          amount: 500000.00,
+          maturityDate: '2024-12-31',
+          interestRate: 6.5,
+          tenure: 12,
+          startDate: '2024-01-01',
+          status: 'active',
+          fdNumber: 'FD001234',
+          interestPayout: 'maturity',
+          nominee: 'John Doe Jr.'
+        },
+        {
+          id: 2,
+          accountNumber: '•••• 5678',
+          amount: 1000000.00,
+          maturityDate: '2025-06-30',
+          interestRate: 7.0,
+          tenure: 18,
+          startDate: '2024-01-01',
+          status: 'active',
+          fdNumber: 'FD005678',
+          interestPayout: 'quarterly',
+          nominee: 'Jane Smith Jr.'
+        }
+      ];
+      setFixedDeposits(initialFDs);
+      localStorage.setItem('bankingFixedDeposits', JSON.stringify(initialFDs));
+    }
+  }, []);
+
   // Save transactions to localStorage whenever they change
   useEffect(() => {
     if (transactions.length > 0) {
       localStorage.setItem('bankingTransactions', JSON.stringify(transactions));
     }
   }, [transactions]);
+
+  // Save fixed deposits to localStorage whenever they change
+  useEffect(() => {
+    if (fixedDeposits.length > 0) {
+      localStorage.setItem('bankingFixedDeposits', JSON.stringify(fixedDeposits));
+    }
+  }, [fixedDeposits]);
 
   const updateAccount = (accountId: number, newBalance: number) => {
     setAccounts(prevAccounts =>
@@ -182,18 +247,63 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
     return newTransaction;
   };
 
+  const addFixedDeposit = (fd: Omit<FixedDeposit, 'id' | 'fdNumber' | 'status'>) => {
+    const newFD: FixedDeposit = {
+      ...fd,
+      id: Date.now(),
+      fdNumber: `FD${Date.now().toString().slice(-6)}`,
+      status: 'active',
+    };
+    
+    setFixedDeposits(prev => [newFD, ...prev]);
+    
+    // Add a transaction for the FD creation
+    addTransaction({
+      account: fd.accountNumber,
+      type: 'debit',
+      amount: fd.amount,
+      description: `Fixed Deposit - ${newFD.fdNumber}`,
+      date: new Date().toISOString(),
+      status: 'completed',
+      category: 'Fixed Deposit',
+    });
+    
+    return newFD;
+  };
+
   const getAccountById = (id: number) => {
     return accounts.find(account => account.id === id);
   };
+
+  const getFixedDepositById = (id: number) => {
+    return fixedDeposits.find(fd => fd.id === id);
+  };
+
+  // Update FD status to matured when they reach maturity date
+  useEffect(() => {
+    const today = new Date();
+    setFixedDeposits(prev => 
+      prev.map(fd => {
+        const maturityDate = new Date(fd.maturityDate);
+        if (fd.status === 'active' && maturityDate <= today) {
+          return { ...fd, status: 'matured' as const };
+        }
+        return fd;
+      })
+    );
+  }, []);
 
   return (
     <BankingContext.Provider
       value={{
         accounts,
         transactions,
+        fixedDeposits,
         updateAccount,
         addTransaction,
+        addFixedDeposit,
         getAccountById,
+        getFixedDepositById,
       }}
     >
       {children}
