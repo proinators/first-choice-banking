@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  /* New color palette */
+  --color-primary-dark: #031d44;
+  --color-primary: #04395e;
+  --color-light: #f7f0f5;
+  --color-accent: #66c3ff;
+  --color-secondary: #1d6172;
+  
+  /* Default theme */
+  --background: #ffffff;
+  --foreground: #031d44;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --text-primary: #031d44;
+  --text-secondary: #4b5563;
+  --accent: #66c3ff;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+}
+
+/* Dark theme overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #031d44;
+    --foreground: #f7f0f5;
+    --card-bg: #04395e;
+    --card-border: #1d6172;
+    --text-primary: #f7f0f5;
+    --text-secondary: #a1a1aa;
+  }
+}
+
+/* Base styles */
+@layer base {
+  body {
+    @apply bg-background text-foreground min-h-screen;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-primary-dark dark:text-light;
+  }
+  
+  a {
+    @apply text-accent hover:text-accent/80 transition-colors;
+  }
+  
+  button, .btn {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .btn-primary {
+    @apply bg-accent text-primary-dark hover:bg-accent/90 font-medium rounded-lg px-5 py-2.5 text-center;
+  }
+  
+  .btn-secondary {
+    @apply bg-primary text-light hover:bg-primary/90 font-medium rounded-lg px-5 py-2.5 text-center;
+  }
+  
+  .card {
+    @apply bg-card-bg border border-card-border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent bg-white dark:bg-gray-800 text-primary-dark dark:text-light;
+  }
+}
