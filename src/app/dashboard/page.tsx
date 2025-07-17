@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { 
   ArrowPathIcon, 
   ArrowUpTrayIcon, 
@@ -23,8 +23,27 @@ import { supabase } from '@/utils/supabaseClient';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, loading, accounts, transactions, fixedDeposits } = useBanking();
+  const pathname = usePathname();
+  const { user, loading, accounts, transactions, fixedDeposits, refreshData } = useBanking();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (pathname === '/dashboard') {
+      refreshData();
+    }
+  }, [pathname, refreshData]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        router.refresh();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -117,6 +136,17 @@ export default function DashboardPage() {
 
       <main className="py-6 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          {/* Manual Refresh Button */}
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={refreshData}
+              className="flex items-center px-4 py-2 bg-[#66c3ff] text-[#031d44] rounded-lg font-medium hover:bg-[#4ab4ff] transition-colors"
+              title="Refresh Dashboard"
+            >
+              <ArrowPathIcon className="h-5 w-5 mr-2" />
+              Refresh
+            </button>
+          </div>
           {/* Welcome Banner */}
           <div className="bg-gradient-to-r from-[#1d6172] to-[#04395e] rounded-xl p-6 mb-6 shadow-lg">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -224,44 +254,61 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {accounts.length > 0 ? (
-                    accounts.map((account) => (
-                      <div
-                        key={account.id}
-                        className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg p-4 transition-colors"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium text-white">{account.name}</h3>
-                            <p className="text-sm text-blue-200">•••• {account.number.slice(-4)}</p>
-                            <p className="text-2xl font-bold text-white mt-2">
-                              {formatCurrency(account.balance || 0)}
-                            </p>
-                          </div>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleDownloadStatement(account.id)}
-                              className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-full"
-                              title="Download Statement"
-                            >
-                              <DocumentTextIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => router.push(`/transfer?from=${account.id}`)}
-                              className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-full"
-                              title="Transfer Money"
-                            >
-                              <ArrowUpTrayIcon className="h-5 w-5" />
-                            </button>
+                  {accounts.length > 0 && (
+                    <>
+                      {accounts.map((account) => (
+                        <div
+                          key={account.id}
+                          className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg p-4 transition-colors"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-medium text-white">{account.name}</h3>
+                              <p className="text-sm text-blue-200">•••• {account.number.slice(-4)}</p>
+                              <p className="text-2xl font-bold text-white mt-2">
+                                {formatCurrency(account.balance || 0)}
+                              </p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleDownloadStatement(account.id)}
+                                className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-full"
+                                title="Download Statement"
+                              >
+                                <DocumentTextIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => router.push(`/transfer?from=${account.id}`)}
+                                className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-full"
+                                title="Transfer Money"
+                              >
+                                <ArrowUpTrayIcon className="h-5 w-5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
+                      ))}
+                      <div className="text-center py-4">
+                        <button
+                          onClick={async () => {
+                            await router.push('/open-account');
+                            setTimeout(() => { refreshData(); }, 1000); // Give time for navigation and account creation
+                          }}
+                          className="mt-2 px-4 py-2 bg-[#66c3ff] text-[#031d44] rounded-lg font-medium hover:bg-[#4ab4ff] transition-colors"
+                        >
+                          Open a New Account
+                        </button>
                       </div>
-                    ))
-                  ) : (
+                    </>
+                  )}
+                  {accounts.length === 0 && (
                     <div className="text-center py-8">
                       <p className="text-blue-200">No accounts found</p>
                       <button
-                        onClick={() => router.push('/open-account')}
+                        onClick={async () => {
+                          await router.push('/open-account');
+                          setTimeout(() => { refreshData(); }, 1000);
+                        }}
                         className="mt-2 px-4 py-2 bg-[#66c3ff] text-[#031d44] rounded-lg font-medium hover:bg-[#4ab4ff] transition-colors"
                       >
                         Open an Account
@@ -293,6 +340,11 @@ export default function DashboardPage() {
                       const today = new Date();
                       const daysToMaturity = Math.ceil((maturityDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                       const isMatured = daysToMaturity <= 0;
+                      // Calculate tenure in years
+                      const startDate = deposit.startDate ? new Date(deposit.startDate) : new Date(maturityDate.getTime() - 365.25 * 24 * 60 * 60 * 1000); // fallback: 1 year before maturity
+                      const tenureYears = (maturityDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+                      const safeTenure = tenureYears > 0 ? tenureYears : 1;
+                      const maturityAmount = deposit.amount * (1 + (deposit.interestRate * safeTenure / 100));
                       
                       return (
                         <div
@@ -326,6 +378,10 @@ export default function DashboardPage() {
                                   <p className="text-xs text-blue-200">Interest Rate</p>
                                   <p className="text-sm text-white font-medium">{deposit.interestRate}%</p>
                                 </div>
+                              </div>
+                              <div className="mt-2">
+                                <p className="text-xs text-blue-200">Maturity Amount</p>
+                                <p className="text-sm text-green-400 font-semibold">{formatCurrency(maturityAmount)}</p>
                               </div>
                               {!isMatured && daysToMaturity > 0 && (
                                 <div className="mt-3 p-2 bg-blue-500/10 rounded-lg">
@@ -369,12 +425,6 @@ export default function DashboardPage() {
                             {formatCurrency(fixedDeposits.reduce((sum, fd) => sum + fd.amount, 0))}
                           </p>
                         </div>
-                        <button
-                          onClick={() => router.push('/fixed-deposits')}
-                          className="text-sm text-[#66c3ff] hover:text-[#99d6ff] transition-colors"
-                        >
-                          View All
-                        </button>
                       </div>
                     </div>
                   </div>

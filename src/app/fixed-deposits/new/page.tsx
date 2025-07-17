@@ -315,7 +315,7 @@ export default function NewFixedDepositPage() {
             )}
 
             {step < 4 ? (
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={step === 3 ? handleSubmit : (e) => e.preventDefault()}>
                 {renderStepContent()}
 
                 <div className="flex justify-between mt-8">

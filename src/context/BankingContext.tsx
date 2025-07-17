@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
 import { Account, Transaction, FixedDeposit, CreditCard } from '@/types';
@@ -18,6 +18,7 @@ interface BankingContextType {
   addCreditCard: (card: Omit<CreditCard, 'id' | 'number' | 'available' | 'issuedDate' | 'balance' | 'user_id'>) => Promise<CreditCard | null>;
   getAccountById: (id: string) => Account | undefined;
   getFixedDepositById: (id: string) => FixedDeposit | undefined;
+  refreshData: () => Promise<void>;
 }
 
 const BankingContext = createContext<BankingContextType | undefined>(undefined);
@@ -72,7 +73,6 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
           .select('*')
           .eq('user_id', user.id);
         if (cardsData) setCreditCards(cardsData);
-      
       }
       setLoading(false);
     };
@@ -95,6 +95,43 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
     return () => {
         authListener.subscription.unsubscribe();
     };
+  }, []);
+
+  // Add refreshData method
+  const refreshData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+
+    if (user) {
+      const { data: accountsData } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('user_id', user.id);
+      if (accountsData) setAccounts(accountsData);
+
+      if (accountsData) {
+        const accountIds = accountsData.map(a => a.id);
+        const { data: transactionsData } = await supabase
+          .from('transactions')
+          .select('*')
+          .in('account_id', accountIds);
+        if (transactionsData) setTransactions(transactionsData);
+      }
+
+      const { data: fdsData } = await supabase
+        .from('fixed_deposits')
+        .select('*')
+        .eq('user_id', user.id);
+      if (fdsData) setFixedDeposits(fdsData);
+
+      const { data: cardsData } = await supabase
+        .from('credit_cards')
+        .select('*')
+        .eq('user_id', user.id);
+      if (cardsData) setCreditCards(cardsData);
+    }
+    setLoading(false);
   }, []);
 
   const updateAccount = async (accountId: string, newBalance: number) => {
@@ -272,6 +309,7 @@ export const BankingProvider = ({ children }: { children: ReactNode }) => {
         addCreditCard,
         getAccountById,
         getFixedDepositById,
+        refreshData, // <-- add this
       }}
     >
       {children}

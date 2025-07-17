@@ -7,13 +7,13 @@ const generateStatement = (account: any, transactions: any[], formatCurrency: (a
   // Filter transactions for this account (in a real app, this would be done on the server)
   const accountTransactions = transactions;
   
-  // Calculate total credits and debits
+  // Calculate total credits and debits based on transaction type
   const credits = accountTransactions
-    .filter((t: any) => t.amount > 0)
-    .reduce((sum: number, t: any) => sum + t.amount, 0);
+    .filter((t: any) => t.type === 'credit')
+    .reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
     
   const debits = accountTransactions
-    .filter((t: any) => t.amount < 0)
+    .filter((t: any) => t.type === 'debit')
     .reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
 
   // Create HTML content for the statement
@@ -78,9 +78,9 @@ const generateStatement = (account: any, transactions: any[], formatCurrency: (a
   
   // Add transaction rows in reverse chronological order
   [...accountTransactions].reverse().forEach((transaction: any) => {
-    const isCredit = transaction.amount >= 0;
+    const isCredit = transaction.type === 'credit';
     if (isCredit) {
-      runningBalance -= transaction.amount;
+      runningBalance -= Math.abs(transaction.amount);
     } else {
       runningBalance += Math.abs(transaction.amount);
     }
@@ -89,9 +89,9 @@ const generateStatement = (account: any, transactions: any[], formatCurrency: (a
       <tr>
         <td>${formatDate(transaction.date)}</td>
         <td>${transaction.description}</td>
-        <td>${transaction.id}</td>
+        <td>${transaction.reference || transaction.id}</td>
         <td class="debit">${!isCredit ? formatCurrency(Math.abs(transaction.amount)) : '-'}</td>
-        <td class="credit">${isCredit ? formatCurrency(transaction.amount) : '-'}</td>
+        <td class="credit">${isCredit ? formatCurrency(Math.abs(transaction.amount)) : '-'}</td>
         <td>${formatCurrency(runningBalance)}</td>
       </tr>
     `;
